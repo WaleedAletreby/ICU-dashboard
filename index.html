@@ -412,7 +412,7 @@ function saveToStorage(data) {
 function fmt(val, unit) {
   const n = parseFloat(val);
   if (isNaN(n)) return '—';
-  const str = Number.isInteger(n) ? n.toString() : n.toFixed(unit === '' && n < 10 ? 2 : 1);
+  const str = n.toFixed(2);
   return str;
 }
 
