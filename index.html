@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ICU Monthly Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f4f2ed;
+    --surface: #ffffff;
+    --surface2: #f9f8f5;
+    --border: rgba(0,0,0,0.1);
+    --border-strong: rgba(0,0,0,0.18);
+    --text: #1a1916;
+    --text-muted: #7a776e;
+    --text-light: #b0ad a5;
+    --accent: #1d4e6b;
+    --accent-light: #e8f1f6;
+    --up: #1a6644;
+    --up-bg: #e8f5ee;
+    --down: #8b1f1f;
+    --down-bg: #faecec;
+    --neutral: #5a5750;
+    --neutral-bg: #f0ede8;
+    --card-radius: 16px;
+    --font-display: 'DM Serif Display', Georgia, serif;
+    --font-body: 'DM Sans', system-ui, sans-serif;
+  }
+
+  body {
+    font-family: var(--font-body);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  /* HEADER */
+  .header {
+    background: var(--accent);
+    padding: 2.5rem 2rem 2rem;
+    text-align: center;
+    position: relative;
+  }
+  .header-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.55);
+    margin-bottom: 0.5rem;
+  }
+  .header-title {
+    font-family: var(--font-display);
+    font-size: clamp(2rem, 5vw, 3rem);
+    color: #ffffff;
+    line-height: 1.1;
+  }
+  .header-subtitle {
+    margin-top: 0.4rem;
+    font-size: 13px;
+    color: rgba(255,255,255,0.5);
+    font-weight: 300;
+  }
+  .admin-btn {
+    position: absolute;
+    top: 1.25rem;
+    right: 1.25rem;
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.2);
+    color: rgba(255,255,255,0.7);
+    border-radius: 8px;
+    padding: 6px 14px;
+    font-size: 12px;
+    font-family: var(--font-body);
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .admin-btn:hover { background: rgba(255,255,255,0.2); color: #fff; }
+  .admin-btn svg { width: 14px; height: 14px; }
+
+  /* CARDS GRID */
+  .cards-wrapper {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 2rem 1.25rem 3rem;
+  }
+  .cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+    gap: 1rem;
+  }
+
+  /* METRIC CARD */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--card-radius);
+    padding: 1.5rem;
+    position: relative;
+    overflow: hidden;
+  }
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--accent);
+    opacity: 0.4;
+  }
+  .card-label {
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 1rem;
+  }
+  .card-values {
+    display: flex;
+    align-items: flex-end;
+    gap: 1rem;
+    margin-bottom: 0.75rem;
+  }
+  .card-current {
+    font-family: var(--font-display);
+    font-size: 2.4rem;
+    line-height: 1;
+    color: var(--text);
+  }
+  .card-prev {
+    font-size: 1.1rem;
+    color: var(--text-muted);
+    padding-bottom: 4px;
+  }
+  .card-prev-label {
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    opacity: 0.7;
+    display: block;
+    line-height: 1;
+    margin-bottom: 2px;
+  }
+  .card-unit {
+    font-size: 1rem;
+    color: var(--text-muted);
+    font-family: var(--font-body);
+    margin-left: 2px;
+  }
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 100px;
+  }
+  .badge.up { background: var(--up-bg); color: var(--up); }
+  .badge.down { background: var(--down-bg); color: var(--down); }
+  .badge.neutral { background: var(--neutral-bg); color: var(--neutral); }
+  .badge svg { width: 12px; height: 12px; }
+
+  /* OVERLAY / MODAL */
+  .overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(10,15,20,0.6);
+    backdrop-filter: blur(4px);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+  }
+  .overlay.open { display: flex; }
+  .modal {
+    background: var(--surface);
+    border-radius: var(--card-radius);
+    width: 100%;
+    max-width: 560px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.25);
+  }
+  .modal-header {
+    padding: 1.5rem 1.5rem 1rem;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .modal-title {
+    font-family: var(--font-display);
+    font-size: 1.4rem;
+    color: var(--text);
+  }
+  .modal-close {
+    background: none; border: none; cursor: pointer;
+    color: var(--text-muted); font-size: 1.5rem; line-height: 1;
+    padding: 4px; border-radius: 6px;
+    transition: background 0.1s;
+  }
+  .modal-close:hover { background: var(--border); }
+  .modal-body { padding: 1.5rem; }
+
+  /* ADMIN FORM */
+  .form-section {
+    margin-bottom: 1.5rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .form-section:last-child { border-bottom: none; margin-bottom: 0; }
+  .form-section-title {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 1rem;
+  }
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+  }
+  .form-group { display: flex; flex-direction: column; gap: 4px; }
+  .form-group label {
+    font-size: 12px; font-weight: 500; color: var(--text-muted);
+  }
+  .form-group input {
+    border: 1px solid var(--border-strong);
+    border-radius: 8px;
+    padding: 7px 10px;
+    font-size: 14px;
+    font-family: var(--font-body);
+    color: var(--text);
+    background: var(--surface2);
+    outline: none;
+    transition: border-color 0.15s;
+    width: 100%;
+  }
+  .form-group input:focus { border-color: var(--accent); background: #fff; }
+  .form-group.full { grid-column: 1 / -1; }
+  .form-note {
+    font-size: 11px; color: var(--text-muted);
+    margin-top: 4px; line-height: 1.4;
+  }
+
+  /* BUTTONS */
+  .btn-primary {
+    background: var(--accent); color: #fff;
+    border: none; border-radius: 10px;
+    padding: 10px 22px;
+    font-size: 14px; font-weight: 500;
+    font-family: var(--font-body);
+    cursor: pointer; transition: opacity 0.15s;
+    width: 100%;
+  }
+  .btn-primary:hover { opacity: 0.85; }
+
+  /* LOGIN FORM */
+  .login-body { padding: 2rem; }
+  .login-body h2 {
+    font-family: var(--font-display);
+    font-size: 1.4rem; margin-bottom: 1.25rem;
+    color: var(--text);
+  }
+  .login-body .form-group { margin-bottom: 1rem; }
+  .login-error {
+    font-size: 12px; color: var(--down);
+    margin-top: -0.5rem; margin-bottom: 0.75rem;
+    display: none;
+  }
+  .login-error.show { display: block; }
+
+  /* FOOTER */
+  .footer {
+    text-align: center;
+    padding: 1.5rem;
+    font-size: 11px;
+    color: var(--text-muted);
+    opacity: 0.6;
+    border-top: 1px solid var(--border);
+    margin-top: 1rem;
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <button class="admin-btn" onclick="openLogin()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+    Admin
+  </button>
+  <div class="header-title" id="dash-title">Loading...</div>
+</div>
+
+<!-- CARDS -->
+<div class="cards-wrapper">
+  <div class="cards-grid" id="cards-grid"></div>
+</div>
+
+<div class="footer">Intensive Care Unit · Internal Dashboard</div>
+
+<!-- LOGIN OVERLAY -->
+<div class="overlay" id="login-overlay">
+  <div class="modal" style="max-width: 360px;">
+    <div class="modal-header">
+      <span class="modal-title">Admin Access</span>
+      <button class="modal-close" onclick="closeLogin()">×</button>
+    </div>
+    <div class="login-body">
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="pwd-input" placeholder="Enter admin password" onkeydown="if(event.key==='Enter')tryLogin()">
+      </div>
+      <div class="login-error" id="login-error">Incorrect password. Please try again.</div>
+      <button class="btn-primary" onclick="tryLogin()">Sign in</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADMIN OVERLAY -->
+<div class="overlay" id="admin-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Edit Dashboard</span>
+      <button class="modal-close" onclick="closeAdmin()">×</button>
+    </div>
+    <div class="modal-body">
+
+      <div class="form-section">
+        <div class="form-section-title">Dashboard Settings</div>
+        <div class="form-row">
+          <div class="form-group full">
+            <label>Dashboard Title (Month &amp; Year)</label>
+            <input type="text" id="f-title" placeholder="e.g. May 2026">
+          </div>
+          <div class="form-group full">
+            <label>New Admin Password (leave blank to keep current)</label>
+            <input type="password" id="f-newpwd" placeholder="New password">
+          </div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="form-section-title">Current Month Values</div>
+        <div class="form-row">
+          <div class="form-group"><label>LOS (days)</label><input type="number" step="0.1" id="f-los-cur"></div>
+          <div class="form-group"><label>Bed Occupancy (%)</label><input type="number" step="0.1" id="f-occ-cur"></div>
+          <div class="form-group"><label>Readmission (%)</label><input type="number" step="0.1" id="f-read-cur"></div>
+          <div class="form-group"><label>SMR</label><input type="number" step="0.01" id="f-smr-cur"></div>
+          <div class="form-group"><label>Reintubation (%)</label><input type="number" step="0.1" id="f-rein-cur"></div>
+          <div class="form-group"><label>Bed Turnover</label><input type="number" step="0.1" id="f-turn-cur"></div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="form-section-title">Previous Month Values</div>
+        <div class="form-row">
+          <div class="form-group"><label>LOS (days)</label><input type="number" step="0.1" id="f-los-prev"></div>
+          <div class="form-group"><label>Bed Occupancy (%)</label><input type="number" step="0.1" id="f-occ-prev"></div>
+          <div class="form-group"><label>Readmission (%)</label><input type="number" step="0.1" id="f-read-prev"></div>
+          <div class="form-group"><label>SMR</label><input type="number" step="0.01" id="f-smr-prev"></div>
+          <div class="form-group"><label>Reintubation (%)</label><input type="number" step="0.1" id="f-rein-prev"></div>
+          <div class="form-group"><label>Bed Turnover</label><input type="number" step="0.1" id="f-turn-prev"></div>
+        </div>
+        <p class="form-note">* Readmission can be 0. All other values must be greater than 0.</p>
+      </div>
+
+      <button class="btn-primary" onclick="saveData()">Save &amp; Publish</button>
+
+    </div>
+  </div>
+</div>
+
+<script>
+const STORAGE_KEY = 'icu_dashboard_v1';
+
+const METRICS = [
+  { id: 'los',  label: 'Length of Stay',  unit: 'days',  canBeZero: false, higherIsBetter: false },
+  { id: 'occ',  label: 'Bed Occupancy',   unit: '%',     canBeZero: false, higherIsBetter: true  },
+  { id: 'read', label: 'Readmission',     unit: '%',     canBeZero: true,  higherIsBetter: false },
+  { id: 'smr',  label: 'SMR',             unit: '',      canBeZero: false, higherIsBetter: false },
+  { id: 'rein', label: 'Reintubation',    unit: '%',     canBeZero: false, higherIsBetter: false },
+  { id: 'turn', label: 'Bed Turnover',    unit: '',      canBeZero: false, higherIsBetter: true  },
+];
+
+function loadData() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch(e) {}
+  return {
+    title: 'May 2026',
+    pwd: 'Omahmad@1976',
+    current:  { los: 4.2, occ: 87.5, read: 0,   smr: 0.82, rein: 3.1, turn: 6.4 },
+    previous: { los: 4.8, occ: 83.0, read: 2.1, smr: 0.91, rein: 4.0, turn: 5.9 },
+  };
+}
+
+function saveToStorage(data) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+
+function fmt(val, unit) {
+  const n = parseFloat(val);
+  if (isNaN(n)) return '—';
+  const str = Number.isInteger(n) ? n.toString() : n.toFixed(unit === '' && n < 10 ? 2 : 1);
+  return str;
+}
+
+function calcChange(cur, prev, canBeZero) {
+  cur = parseFloat(cur); prev = parseFloat(prev);
+  if (isNaN(cur) || isNaN(prev)) return { type: 'neutral', label: '—' };
+  if (prev === 0 && cur === 0) return { type: 'neutral', label: 'No change' };
+  if (prev === 0) return { type: 'up', label: `+${fmt(cur, '')} (new)` };
+  if (cur === 0) return { type: 'down', label: `−${fmt(prev, '')} (zero)` };
+  const pct = ((cur - prev) / Math.abs(prev)) * 100;
+  const sign = pct >= 0 ? '+' : '';
+  return { pct, type: pct === 0 ? 'neutral' : pct > 0 ? 'up' : 'down', label: `${sign}${pct.toFixed(1)}%` };
+}
+
+function arrowSVG(dir) {
+  const d = dir === 'up'
+    ? 'M12 19V5M5 12l7-7 7 7'
+    : 'M12 5v14M19 12l-7 7-7-7';
+  return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="${d}"/></svg>`;
+}
+
+function renderCards(data) {
+  const grid = document.getElementById('cards-grid');
+  document.getElementById('dash-title').textContent = data.title;
+  grid.innerHTML = METRICS.map(m => {
+    const cur = data.current[m.id];
+    const prev = data.previous[m.id];
+    const ch = calcChange(cur, prev, m.canBeZero);
+    // For metrics where lower is better, invert badge direction
+    const displayType = ch.type === 'neutral' ? 'neutral'
+      : (m.higherIsBetter ? ch.type : ch.type === 'up' ? 'down' : 'up');
+    const arrow = ch.type !== 'neutral' ? arrowSVG(ch.type) : '';
+    return `
+    <div class="card">
+      <div class="card-label">${m.label}</div>
+      <div class="card-values">
+        <div>
+          <span class="card-current">${fmt(cur, m.unit)}</span><span class="card-unit">${m.unit}</span>
+        </div>
+        <div>
+          <span class="card-prev-label">prev.</span>
+          <span class="card-prev">${fmt(prev, m.unit)}${m.unit}</span>
+        </div>
+      </div>
+      <span class="badge ${displayType}">${arrow}${ch.label}</span>
+    </div>`;
+  }).join('');
+}
+
+// LOGIN
+function openLogin() {
+  document.getElementById('pwd-input').value = '';
+  document.getElementById('login-error').classList.remove('show');
+  document.getElementById('login-overlay').classList.add('open');
+  setTimeout(() => document.getElementById('pwd-input').focus(), 100);
+}
+function closeLogin() {
+  document.getElementById('login-overlay').classList.remove('open');
+}
+function tryLogin() {
+  const data = loadData();
+  const entered = document.getElementById('pwd-input').value;
+  if (entered === data.pwd) {
+    closeLogin();
+    openAdmin();
+  } else {
+    document.getElementById('login-error').classList.add('show');
+    document.getElementById('pwd-input').value = '';
+    document.getElementById('pwd-input').focus();
+  }
+}
+
+// ADMIN
+function openAdmin() {
+  const data = loadData();
+  document.getElementById('f-title').value = data.title;
+  document.getElementById('f-newpwd').value = '';
+  METRICS.forEach(m => {
+    document.getElementById(`f-${m.id}-cur`).value = data.current[m.id];
+    document.getElementById(`f-${m.id}-prev`).value = data.previous[m.id];
+  });
+  document.getElementById('admin-overlay').classList.add('open');
+}
+function closeAdmin() {
+  document.getElementById('admin-overlay').classList.remove('open');
+}
+function saveData() {
+  const data = loadData();
+  const title = document.getElementById('f-title').value.trim();
+  if (title) data.title = title;
+  const newpwd = document.getElementById('f-newpwd').value;
+  if (newpwd) data.pwd = newpwd;
+  METRICS.forEach(m => {
+    const cv = parseFloat(document.getElementById(`f-${m.id}-cur`).value);
+    const pv = parseFloat(document.getElementById(`f-${m.id}-prev`).value);
+    if (!isNaN(cv)) data.current[m.id] = cv;
+    if (!isNaN(pv)) data.previous[m.id] = pv;
+  });
+  saveToStorage(data);
+  renderCards(data);
+  closeAdmin();
+}
+
+// Close overlays on backdrop click
+document.getElementById('login-overlay').addEventListener('click', function(e) {
+  if (e.target === this) closeLogin();
+});
+document.getElementById('admin-overlay').addEventListener('click', function(e) {
+  if (e.target === this) closeAdmin();
+});
+
+// INIT
+renderCards(loadData());
+</script>
+</body>
+</html>
